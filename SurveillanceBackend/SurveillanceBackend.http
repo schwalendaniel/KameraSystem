@@ -1,0 +1,6 @@
+@SurveillanceBackend_HostAddress = http://localhost:5188
+
+GET {{SurveillanceBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
