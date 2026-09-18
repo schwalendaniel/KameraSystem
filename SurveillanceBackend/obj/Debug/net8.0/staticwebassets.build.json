@@ -1,0 +1,39 @@
+{
+  "Version": 1,
+  "Hash": "FmK9mwyAOEL1LpOO2uqayrbQ+rCVOOkxEPFyRd7BV4A=",
+  "Source": "SurveillanceBackend",
+  "BasePath": "_content/SurveillanceBackend",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "SurveillanceBackend/wwwroot",
+      "Source": "SurveillanceBackend",
+      "ContentRoot": "/home/daniel/Schule/WPF/Programmierung/KameraSystem/SurveillanceBackend/wwwroot/",
+      "BasePath": "_content/SurveillanceBackend",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": [
+    {
+      "Identity": "/home/daniel/Schule/WPF/Programmierung/KameraSystem/SurveillanceBackend/wwwroot/index.html",
+      "SourceId": "SurveillanceBackend",
+      "SourceType": "Discovered",
+      "ContentRoot": "/home/daniel/Schule/WPF/Programmierung/KameraSystem/SurveillanceBackend/wwwroot/",
+      "BasePath": "_content/SurveillanceBackend",
+      "RelativePath": "index.html",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot/index.html"
+    }
+  ]
+}

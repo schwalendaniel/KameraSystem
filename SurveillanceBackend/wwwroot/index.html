@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kameraüberwachung</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #111827; color: #f9fafb; }
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { margin-top: 0; }
+    .controls { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+    select, button { border: 1px solid #4b5563; border-radius: .4rem; padding: .55rem .75rem; font: inherit; }
+    select { min-width: 20rem; background: #1f2937; color: inherit; }
+    button { background: #2563eb; color: white; cursor: pointer; }
+    button:disabled { background: #4b5563; cursor: not-allowed; }
+    video { display: block; width: 100%; max-height: 70vh; background: #000; border-radius: .5rem; }
+    #status { min-height: 1.5rem; color: #d1d5db; }
+    .recording { color: #fca5a5; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Kameraüberwachung</h1>
+    <div class="controls">
+      <label for="camera">Kamera:</label>
+      <select id="camera" disabled>
+        <option>Kameras werden gesucht ...</option>
+      </select>
+      <button id="start" type="button">Kamera starten</button>
+    </div>
+    <p id="status" role="status">Bitte Kamerazugriff erlauben.</p>
+    <video id="preview" autoplay muted playsinline></video>
+    <canvas id="analysis" hidden></canvas>
+  </main>
+  <script>
+    const cameraSelect = document.querySelector("#camera");
+    const startButton = document.querySelector("#start");
+    const status = document.querySelector("#status");
+    const video = document.querySelector("#preview");
+    const canvas = document.querySelector("#analysis");
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    let stream;
+    let previousFrame;
+    let lastCapture = 0;
+    let analysisTimer;
+
+    function setStatus(message, recording = false) {
+      status.textContent = message;
+      status.classList.toggle("recording", recording);
+    }
+
+    async function listCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(device => device.kind === "videoinput");
+      cameraSelect.replaceChildren();
+      cameras.forEach((camera, index) => {
+        const option = document.createElement("option");
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Kamera ${index + 1}`;
+        cameraSelect.append(option);
+      });
+      cameraSelect.disabled = cameras.length === 0;
+      if (cameras.length === 0) setStatus("Keine Kamera gefunden.");
+    }
+
+    async function startCamera() {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      if (analysisTimer) clearInterval(analysisTimer);
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: cameraSelect.value ? { deviceId: { exact: cameraSelect.value } } : true,
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      await listCameras();
+      previousFrame = undefined;
+      lastCapture = 0;
+      analysisTimer = setInterval(analyseFrame, 250);
+      startButton.textContent = "Kamera neu starten";
+      setStatus("Überwachung aktiv.");
+    }
+
+    async function captureFrame() {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", .88));
+      if (!blob) return;
+      const form = new FormData();
+      form.append("image", blob, "motion.jpg");
+      const response = await fetch("/api/captures", { method: "POST", body: form });
+      if (!response.ok) throw new Error("Das Bild konnte nicht gespeichert werden.");
+    }
+
+    function analyseFrame() {
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      const width = 320;
+      const height = Math.round(width * video.videoHeight / video.videoWidth);
+      if (!height) return;
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(video, 0, 0, width, height);
+      const current = context.getImageData(0, 0, width, height);
+      if (!previousFrame) {
+        previousFrame = current;
+        return;
+      }
+
+      let changedPixels = 0;
+      for (let i = 0; i < current.data.length; i += 4) {
+        const difference = Math.abs(current.data[i] - previousFrame.data[i])
+          + Math.abs(current.data[i + 1] - previousFrame.data[i + 1])
+          + Math.abs(current.data[i + 2] - previousFrame.data[i + 2]);
+        if (difference > 75) changedPixels++;
+      }
+      previousFrame = current;
+
+      const motionRatio = changedPixels / (width * height);
+      const now = Date.now();
+      if (motionRatio > 0.02 && now - lastCapture >= 2000) {
+        lastCapture = now;
+        setStatus("Bewegung erkannt - Bild wird gespeichert.", true);
+        captureFrame()
+          .then(() => setStatus("Überwachung aktiv. Letztes Bild gespeichert."))
+          .catch(error => setStatus(error.message));
+      }
+    }
+
+    startButton.addEventListener("click", () => {
+      startCamera().catch(error => setStatus(`Kamera konnte nicht gestartet werden: ${error.message}`));
+    });
+    cameraSelect.addEventListener("change", () => {
+      if (stream) startCamera().catch(error => setStatus(`Kamera konnte nicht gewechselt werden: ${error.message}`));
+    });
+    navigator.mediaDevices?.addEventListener("devicechange", () => listCameras().catch(() => {}));
+  </script>
+</body>
+</html>

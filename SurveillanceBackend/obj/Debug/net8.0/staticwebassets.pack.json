@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "/home/daniel/Schule/WPF/Programmierung/KameraSystem/SurveillanceBackend/wwwroot/index.html",
+      "PackagePath": "staticwebassets/index.html"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.SurveillanceBackend.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.build.SurveillanceBackend.props",
+      "PackagePath": "build\\SurveillanceBackend.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildMultiTargeting.SurveillanceBackend.props",
+      "PackagePath": "buildMultiTargeting\\SurveillanceBackend.props"
+    },
+    {
+      "Id": "obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.SurveillanceBackend.props",
+      "PackagePath": "buildTransitive\\SurveillanceBackend.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

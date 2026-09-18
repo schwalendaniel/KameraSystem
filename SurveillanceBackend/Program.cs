@@ -1,13 +1,10 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -15,30 +12,39 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+var captureDirectory = Path.Combine(app.Environment.ContentRootPath, "captures");
+Directory.CreateDirectory(captureDirectory);
 
-app.MapGet("/weatherforecast", () =>
+app.MapPost("/api/captures", async (HttpRequest request, CancellationToken cancellationToken) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+    if (!request.HasFormContentType)
+    {
+        return Results.BadRequest("Es muss ein Multipart-Formular mit einem Bild gesendet werden.");
+    }
+
+    var form = await request.ReadFormAsync(cancellationToken);
+    var image = form.Files.GetFile("image");
+    if (image is null || image.Length == 0)
+    {
+        return Results.BadRequest("Kein Bild empfangen.");
+    }
+
+    if (!string.Equals(image.ContentType, "image/jpeg", StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest("Es werden nur JPEG-Bilder unterstützt.");
+    }
+
+    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
+    var filePath = Path.Combine(captureDirectory, $"motion-{timestamp}.jpg");
+    await using (var output = File.Create(filePath))
+    {
+        await image.CopyToAsync(output, cancellationToken);
+    }
+
+    return Results.Ok(new { fileName = Path.GetFileName(filePath) });
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
