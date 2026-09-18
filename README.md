@@ -15,4 +15,6 @@ dotnet run --project SurveillanceBackend
 Danach die in der Konsole angegebene URL im Browser öffnen. Für den
 Kamerazugriff muss die Seite über `https://localhost` oder `localhost`
 aufgerufen werden. Beim ersten Start muss der Browser den Kamerazugriff
-erlauben.
+erlauben. Klicke anschließend auf **Kamera starten**. Falls vorher einmal
+„Blockieren“ ausgewählt wurde, muss die Berechtigung über das Kamera- oder
+Schlosssymbol links neben der URL wieder auf „Zulassen“ gesetzt werden.

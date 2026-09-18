@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SurveillanceBackend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3af3df2ca2eafa10a4c3eef4801929a5ad66f18a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b58e41bb3dedd186f8d60099ebbd9235921d5d34")]
 [assembly: System.Reflection.AssemblyProductAttribute("SurveillanceBackend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SurveillanceBackend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

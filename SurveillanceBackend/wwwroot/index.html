@@ -29,7 +29,7 @@
       </select>
       <button id="start" type="button">Kamera starten</button>
     </div>
-    <p id="status" role="status">Bitte Kamerazugriff erlauben.</p>
+    <p id="status" role="status">Klicke auf „Kamera starten“, um den Kamerazugriff anzufordern.</p>
     <video id="preview" autoplay muted playsinline></video>
     <canvas id="analysis" hidden></canvas>
   </main>
@@ -51,6 +51,9 @@
     }
 
     async function listCameras() {
+      if (!navigator.mediaDevices) {
+        throw new Error("Dieser Browser stellt keinen Kamerazugriff bereit. Öffne die Anwendung über https://localhost oder http://localhost.");
+      }
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cameras = devices.filter(device => device.kind === "videoinput");
       cameraSelect.replaceChildren();
@@ -61,16 +64,29 @@
         cameraSelect.append(option);
       });
       cameraSelect.disabled = cameras.length === 0;
-      if (cameras.length === 0) setStatus("Keine Kamera gefunden.");
     }
 
     async function startCamera() {
       if (stream) stream.getTracks().forEach(track => track.stop());
       if (analysisTimer) clearInterval(analysisTimer);
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: cameraSelect.value ? { deviceId: { exact: cameraSelect.value } } : true,
-        audio: false
-      });
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Kamerazugriff ist hier nicht verfügbar. Öffne die Anwendung über https://localhost oder http://localhost.");
+      }
+
+      setStatus("Bitte bestätige den Kamerazugriff im Browser.");
+      const selectedDeviceId = cameraSelect.value;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+          audio: false
+        });
+      } catch (error) {
+        if (error.name === "OverconstrainedError" && selectedDeviceId) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        } else {
+          throw error;
+        }
+      }
       video.srcObject = stream;
       await video.play();
       await listCameras();
@@ -125,12 +141,21 @@
     }
 
     startButton.addEventListener("click", () => {
-      startCamera().catch(error => setStatus(`Kamera konnte nicht gestartet werden: ${error.message}`));
+      startCamera().catch(error => {
+        const messages = {
+          NotAllowedError: "Der Kamerazugriff wurde blockiert. Erlaube ihn in den Website-Einstellungen des Browsers und starte danach erneut.",
+          NotFoundError: "Es wurde keine Kamera gefunden.",
+          NotReadableError: "Die Kamera wird bereits von einem anderen Programm verwendet.",
+          SecurityError: "Der Browser erlaubt Kamerazugriff nur über localhost oder HTTPS."
+        };
+        setStatus(messages[error.name] || `Kamera konnte nicht gestartet werden: ${error.message}`);
+      });
     });
     cameraSelect.addEventListener("change", () => {
       if (stream) startCamera().catch(error => setStatus(`Kamera konnte nicht gewechselt werden: ${error.message}`));
     });
     navigator.mediaDevices?.addEventListener("devicechange", () => listCameras().catch(() => {}));
+    listCameras().catch(error => setStatus(error.message));
   </script>
 </body>
 </html>
