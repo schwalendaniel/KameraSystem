@@ -1,22 +1,16 @@
+using SurveillanceBackend;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<CaptureStorage>();
+builder.Services.AddHostedService<CaptureCleanupService>();
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
-
-var captureDirectory = Path.Combine(app.Environment.ContentRootPath, "captures");
-Directory.CreateDirectory(captureDirectory);
 
 app.MapPost("/api/captures", async (HttpRequest request, CancellationToken cancellationToken) =>
 {
@@ -37,14 +31,11 @@ app.MapPost("/api/captures", async (HttpRequest request, CancellationToken cance
         return Results.BadRequest("Es werden nur JPEG-Bilder unterstützt.");
     }
 
-    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
-    var filePath = Path.Combine(captureDirectory, $"motion-{timestamp}.jpg");
-    await using (var output = File.Create(filePath))
-    {
-        await image.CopyToAsync(output, cancellationToken);
-    }
+    var storage = app.Services.GetRequiredService<CaptureStorage>();
+    await using var imageStream = image.OpenReadStream();
+    var fileName = await storage.SaveAsync(imageStream, cancellationToken);
 
-    return Results.Ok(new { fileName = Path.GetFileName(filePath) });
+    return Results.Ok(new { fileName });
 });
 
 app.Run();
