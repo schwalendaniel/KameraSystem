@@ -1,7 +1,16 @@
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register email service
+builder.Services.AddSingleton<CameraAlertService>();
+
+builder.Services.AddSingleton<MotionEmailBatchService>();
+
+builder.Services.AddHostedService(
+    sp => sp.GetRequiredService<MotionEmailBatchService>());
 
 var app = builder.Build();
 
@@ -15,36 +24,80 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-var captureDirectory = Path.Combine(app.Environment.ContentRootPath, "captures");
+var captureDirectory = Path.Combine(
+    app.Environment.ContentRootPath,
+    "captures");
+
 Directory.CreateDirectory(captureDirectory);
 
-app.MapPost("/api/captures", async (HttpRequest request, CancellationToken cancellationToken) =>
+app.MapPost("/api/captures", async (
+    HttpRequest request,
+    MotionEmailBatchService batchService,
+    ILogger<Program> logger,
+    CancellationToken cancellationToken) =>
 {
     if (!request.HasFormContentType)
     {
-        return Results.BadRequest("Es muss ein Multipart-Formular mit einem Bild gesendet werden.");
+        return Results.BadRequest(
+            "Es muss ein Multipart-Formular mit einem Bild gesendet werden.");
     }
 
     var form = await request.ReadFormAsync(cancellationToken);
     var image = form.Files.GetFile("image");
+
     if (image is null || image.Length == 0)
     {
         return Results.BadRequest("Kein Bild empfangen.");
     }
 
-    if (!string.Equals(image.ContentType, "image/jpeg", StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(
+        image.ContentType,
+        "image/jpeg",
+        StringComparison.OrdinalIgnoreCase))
     {
-        return Results.BadRequest("Es werden nur JPEG-Bilder unterstützt.");
+        return Results.BadRequest(
+            "Es werden nur JPEG-Bilder unterstützt.");
     }
 
-    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss-fff");
-    var filePath = Path.Combine(captureDirectory, $"motion-{timestamp}.jpg");
+    // Get camera information
+    var cameraName = form["cameraName"].ToString();
+    var cameraId = form["cameraId"].ToString();
+
+    if (string.IsNullOrWhiteSpace(cameraName))
+        cameraName = "Kamera 1";
+
+    if (string.IsNullOrWhiteSpace(cameraId))
+        cameraId = "1";
+
+    // Save camera image
+    var timestamp = DateTime.Now;
+    var fileName = $"motion-{timestamp:yyyyMMdd-HHmmss-fff}.jpg";
+    var filePath = Path.Combine(captureDirectory, fileName);
+
     await using (var output = File.Create(filePath))
     {
         await image.CopyToAsync(output, cancellationToken);
     }
 
-    return Results.Ok(new { fileName = Path.GetFileName(filePath) });
+    logger.LogInformation(
+        "Kamerabild gespeichert: {FileName}", fileName);
+
+    // Add camera image to the email batch
+    batchService.AddCapture(new MotionCapture(
+        cameraName,
+        cameraId,
+        timestamp,
+        filePath));
+
+    logger.LogInformation(
+        "Kamerabild zur E-Mail-Sammlung hinzugefügt: {FileName}",
+        fileName);
+
+    return Results.Ok(new
+    {
+        fileName,
+        emailQueued = true
+    });
 });
 
 app.Run();
