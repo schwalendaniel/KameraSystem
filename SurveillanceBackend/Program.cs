@@ -1,8 +1,13 @@
+<<<<<<< HEAD
+=======
+using SurveillanceBackend;
+>>>>>>> c0cf6ffaac8778654cc91306d40c2c334c11e845
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSingleton<CaptureStorage>();
+builder.Services.AddHostedService<CaptureCleanupService>();
 
 // Register email service
 builder.Services.AddSingleton<CameraAlertService>();
@@ -14,16 +19,11 @@ builder.Services.AddHostedService(
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
 app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+<<<<<<< HEAD
 var captureDirectory = Path.Combine(
     app.Environment.ContentRootPath,
     "captures");
@@ -35,6 +35,9 @@ app.MapPost("/api/captures", async (
     MotionEmailBatchService batchService,
     ILogger<Program> logger,
     CancellationToken cancellationToken) =>
+=======
+app.MapPost("/api/captures", async (HttpRequest request, CancellationToken cancellationToken) =>
+>>>>>>> c0cf6ffaac8778654cc91306d40c2c334c11e845
 {
     if (!request.HasFormContentType)
     {
@@ -59,6 +62,7 @@ app.MapPost("/api/captures", async (
             "Es werden nur JPEG-Bilder unterstützt.");
     }
 
+<<<<<<< HEAD
     // Get camera information
     var cameraName = form["cameraName"].ToString();
     var cameraId = form["cameraId"].ToString();
@@ -98,6 +102,13 @@ app.MapPost("/api/captures", async (
         fileName,
         emailQueued = true
     });
+=======
+    var storage = app.Services.GetRequiredService<CaptureStorage>();
+    await using var imageStream = image.OpenReadStream();
+    var fileName = await storage.SaveAsync(imageStream, cancellationToken);
+
+    return Results.Ok(new { fileName });
+>>>>>>> c0cf6ffaac8778654cc91306d40c2c334c11e845
 });
 
 app.Run();

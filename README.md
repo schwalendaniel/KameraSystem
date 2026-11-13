@@ -6,6 +6,11 @@ Bewegungserkennung vergleicht aufeinanderfolgende Videobilder. Bei Bewegung
 wird höchstens alle zwei Sekunden ein JPEG-Bild an das Backend übertragen und
 im Ordner `SurveillanceBackend/captures` gespeichert.
 
+Ein Hintergrunddienst überwacht diesen Ordner. Aufnahmen werden nach 72
+Stunden gelöscht. Zusätzlich werden immer die ältesten Aufnahmen entfernt,
+falls die Gesamtgröße der gespeicherten JPEGs 20 GB überschreitet. Die
+Bereinigung läuft beim Start und anschließend einmal pro Minute.
+
 ## Starten
 
 ```bash
